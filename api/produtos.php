@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . "/supabase.php";
+require_once __DIR__ . "/index.php";
 
 // Endpoint REST do Supabase
 $url = SUPABASE_URL . "/rest/v1/tbl_produto?select=*";

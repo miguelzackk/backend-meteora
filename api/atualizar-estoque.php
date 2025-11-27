@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once __DIR__ . "/supabase.php";
+require_once __DIR__ . "/index.php";
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     echo json_encode(["error" => "Método inválido"]);
