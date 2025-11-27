@@ -47,7 +47,7 @@ function supabaseGET($table)
 // -----------------------------
 // TESTE DE LISTAGEM
 // -----------------------------
-$resultado = supabaseGET("produtos"); // troque para sua tabela real
+$resultado = supabaseGET("tbl_produto"); // troque para sua tabela real
 
 echo "<h1>REST do Supabase funcionando! ✔️</h1>";
 echo "<h3>Resposta da API:</h3>";
