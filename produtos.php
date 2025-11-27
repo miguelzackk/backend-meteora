@@ -10,13 +10,16 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 }
 
 // Pega variáveis de ambiente
-$SUPABASE_URL = $_ENV['SUPABASE_URL'] ?? $_SERVER['SUPABASE_URL'];
-$SUPABASE_KEY = $_ENV['SUPABASE_KEY'] ?? $_SERVER['SUPABASE_KEY'];
+$SUPABASE_URL = $_SERVER['SUPABASE_URL'] ?? '';
+$SUPABASE_KEY = $_SERVER['SUPABASE_KEY'] ?? '';
 
 if (!$SUPABASE_URL || !$SUPABASE_KEY) {
-    echo json_encode(["error" => "Variáveis de ambiente SUPABASE_URL ou SUPABASE_KEY não definidas"]);
+    echo json_encode([
+        "error" => "Variáveis de ambiente não definidas no container"
+    ]);
     exit;
 }
+
 
 // Busca todos os produtos
 $url = $SUPABASE_URL . "/rest/v1/tbl_produto?select=*";
