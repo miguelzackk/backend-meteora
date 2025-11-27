@@ -10,8 +10,8 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 // -----------------------------
 // VARIÁVEIS DO SUPABASE
 // -----------------------------
-$SUPABASE_URL  = $_ENV['SUPABASE_URL']  ?? "";
-$SUPABASE_KEY  = $_ENV['SUPABASE_KEY']  ?? "";
+$SUPABASE_URL = getenv("SUPABASE_URL");
+$SUPABASE_KEY = getenv("SUPABASE_KEY");
 
 if (!$SUPABASE_URL || !$SUPABASE_KEY) {
     die("<h3>❌ Erro: SUPABASE_URL ou SUPABASE_KEY não foram definidas no .env</h3>");
