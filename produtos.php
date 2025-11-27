@@ -9,14 +9,22 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     exit();
 }
 
-// Pega as variáveis direto do Railway
-$SUPABASE_URL = getenv("SUPABASE_URL");
-$SUPABASE_KEY = getenv("SUPABASE_KEY");
+// Lê variáveis de ambiente
+$SUPABASE_URL = $_ENV['SUPABASE_URL'] ?? $_SERVER['SUPABASE_URL'];
+$SUPABASE_KEY = $_ENV['SUPABASE_KEY'] ?? $_SERVER['SUPABASE_KEY'];
+
+// Se não estiverem definidas, retorna erro
+if (!$SUPABASE_URL || !$SUPABASE_KEY) {
+    echo json_encode([
+        "error" => "Variáveis de ambiente SUPABASE_URL ou SUPABASE_KEY não definidas"
+    ]);
+    exit;
+}
 
 // URL da tabela de produtos
 $url = $SUPABASE_URL . "/rest/v1/tbl_produto?select=*";
 
-// Inicia o cURL
+// cURL
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -29,7 +37,7 @@ $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
-// Verifica se houve erro
+// Verifica erro
 if ($httpCode >= 400) {
     echo json_encode([
         "error" => "Erro ao buscar produtos",
@@ -39,6 +47,6 @@ if ($httpCode >= 400) {
     exit;
 }
 
-// Retorna os produtos em JSON
+// Retorna JSON
 echo $response;
 ?>
