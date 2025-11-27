@@ -9,13 +9,9 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     exit();
 }
 
-require __DIR__ . "/vendor/autoload.php";
-
-$dotenv = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
-$dotenv->load();
-
-$SUPABASE_URL = $_ENV["SUPABASE_URL"];
-$SUPABASE_KEY = $_ENV["SUPABASE_KEY"];
+// Pega as variáveis direto do Railway
+$SUPABASE_URL = getenv("SUPABASE_URL");
+$SUPABASE_KEY = getenv("SUPABASE_KEY");
 
 function supabase($method, $endpoint, $body = null)
 {
