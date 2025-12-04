@@ -1,6 +1,6 @@
 <?php
 // =====================
-// LISTAR HISTÓRICO DE COMPRAS (SUPABASE)
+// LISTAR HISTÓRICO DE COMPRAS (SUPABASE) - VERSÃO CORRIGIDA
 // =====================
 
 ini_set("display_errors", 1);
@@ -31,61 +31,103 @@ if ($id_cliente <= 0) {
 }
 
 // =====================
-// Buscar histórico no Supabase
+// BUSCAR COMPRAS DO CLIENTE
 // =====================
-// Aqui usamos a sintaxe `select` com relacionamentos, que funciona no Supabase.
-// Ela permite retornar os dados de várias tabelas (JOIN implícito).
-// Veja a estrutura abaixo: 
-//   tbl_compra -> tbl_historico_compra -> tbl_produto
+error_log("Buscando histórico para cliente ID: " . $id_cliente);
 
-$endpoint = "tbl_compra?select=id_compra,data_compra,valor_total,"
-    . "tbl_historico_compra(id_produto,quantidade,valor_unitario,"
-    . "tbl_produto(nome,imagem))"
+// Primeiro buscar as compras do cliente
+$endpointCompras = "tbl_compra?select=id_compra,data_compra,valor_total"
     . "&id_cliente=eq.$id_cliente"
-    . "&order=data_compra.desc";
+    . "&order=id_compra.desc";
 
-$response = supabase("GET", $endpoint);
+$responseCompras = supabase("GET", $endpointCompras);
 
-if ($response["status"] >= 400) {
+if ($responseCompras["status"] >= 400) {
+    error_log("Erro ao buscar compras: " . print_r($responseCompras, true));
     http_response_code(500);
-    echo json_encode(["success" => false, "error" => "Erro ao buscar histórico", "debug" => $response]);
+    echo json_encode([
+        "success" => false, 
+        "error" => "Erro ao buscar compras", 
+        "debug" => $responseCompras
+    ]);
     exit();
 }
 
-$data = $response["data"] ?? [];
+$compras = $responseCompras["data"] ?? [];
 
-if (empty($data)) {
+error_log("Compras encontradas: " . count($compras));
+
+if (empty($compras)) {
     echo json_encode(["success" => true, "historico" => []]);
     exit();
 }
 
 // =====================
-// Reorganizar estrutura (igual seu JSON antigo)
+// BUSCAR ITENS DE CADA COMPRA
 // =====================
 $historico = [];
 
-foreach ($data as $compra) {
-    $compraItem = [
-        "id_compra" => $compra["id_compra"],
-        "data_compra" => $compra["data_compra"],
-        "valor_total" => (float)$compra["valor_total"],
-        "itens" => []
-    ];
-
-    if (!empty($compra["tbl_historico_compra"])) {
-        foreach ($compra["tbl_historico_compra"] as $hist) {
-            $prod = $hist["tbl_produto"] ?? [];
-
-            $compraItem["itens"][] = [
-                "nome_produto" => $prod["nome"] ?? "Produto removido",
-                "imagem" => $prod["imagem"] ?? null,
-                "quantidade" => (int)$hist["quantidade"],
-                "valor_unitario" => (float)$hist["valor_unitario"]
+foreach ($compras as $compra) {
+    $id_compra = (int)$compra["id_compra"];
+    error_log("Processando compra ID: " . $id_compra);
+    
+    // Buscar itens desta compra
+    $endpointItens = "tbl_historico_compra?select=id_produto,quantidade,valor_unitario"
+        . "&id_compra=eq.$id_compra";
+    
+    $responseItens = supabase("GET", $endpointItens);
+    $itens = $responseItens["data"] ?? [];
+    
+    error_log("Itens encontrados para compra $id_compra: " . count($itens));
+    
+    // Para cada item, buscar detalhes do produto
+    $itensDetalhados = [];
+    
+    foreach ($itens as $item) {
+        $id_produto = (int)$item["id_produto"];
+        
+        // Buscar informações do produto
+        $endpointProduto = "tbl_produto?select=nome,imagem"
+            . "&id_produto=eq.$id_produto";
+        
+        $responseProduto = supabase("GET", $endpointProduto);
+        $produto = $responseProduto["data"][0] ?? null;
+        
+        if ($produto) {
+            $itensDetalhados[] = [
+                "nome_produto" => $produto["nome"] ?? "Produto desconhecido",
+                "imagem" => $produto["imagem"] ?? null,
+                "quantidade" => (int)$item["quantidade"],
+                "valor_unitario" => (float)$item["valor_unitario"]
+            ];
+        } else {
+            // Se o produto não foi encontrado, usar dados básicos
+            $itensDetalhados[] = [
+                "nome_produto" => "Produto #" . $id_produto . " (não encontrado)",
+                "imagem" => null,
+                "quantidade" => (int)$item["quantidade"],
+                "valor_unitario" => (float)$item["valor_unitario"]
             ];
         }
     }
-
-    $historico[] = $compraItem;
+    
+    $historico[] = [
+        "id_compra" => $id_compra,
+        "data_compra" => $compra["data_compra"] ?? "",
+        "valor_total" => (float)($compra["valor_total"] ?? 0),
+        "itens" => $itensDetalhados
+    ];
+    
+    error_log("Compra $id_compra processada com " . count($itensDetalhados) . " itens");
 }
 
-echo json_encode(["success" => true, "historico" => $historico]);
+error_log("Histórico final: " . count($historico) . " compras");
+
+echo json_encode([
+    "success" => true, 
+    "historico" => $historico,
+    "debug_info" => [
+        "cliente_id" => $id_cliente,
+        "total_compras" => count($historico)
+    ]
+]);
