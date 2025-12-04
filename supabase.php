@@ -4,19 +4,32 @@ $SUPABASE_URL = getenv("SUPABASE_URL") ?: "https://ecbgnduxbpgxyajevdgz.supabase
 $SUPABASE_KEY = getenv("SUPABASE_KEY") ?: "sb_secret_kusL9WUkSpcaperk1hTgIQ_qhV3Wo4u";
 
 if (!function_exists('supabase')) {
-    function supabase($method, $endpoint, $body = null)
+    function supabase($method, $endpoint, $body = null, $options = [])
     {
         global $SUPABASE_URL, $SUPABASE_KEY;
-
+        
+        // Opções padrão
+        $defaultOptions = [
+            'return_representation' => false
+        ];
+        $options = array_merge($defaultOptions, $options);
+        
+        $headers = [
+            "apikey: $SUPABASE_KEY",
+            "Authorization: Bearer $SUPABASE_KEY",
+            "Content-Type: application/json"
+        ];
+        
+        // Adicionar header para retornar representação se solicitado
+        if ($options['return_representation']) {
+            $headers[] = "Prefer: return=representation";
+        }
+        
         $ch = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_URL => "$SUPABASE_URL/rest/v1/$endpoint",
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => [
-                "apikey: $SUPABASE_KEY",
-                "Authorization: Bearer $SUPABASE_KEY",
-                "Content-Type: application/json"
-            ],
+            CURLOPT_HTTPHEADER => $headers,
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_SSL_VERIFYPEER => false,
             CURLOPT_SSL_VERIFYHOST => false

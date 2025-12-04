@@ -45,39 +45,54 @@ $novaCompra = [
     "valor_total"  => 0
 ];
 
-// Usar RETURN=REPRESENTATION para obter o registro criado
-$resCompra = supabase("POST", "tbl_compra?select=id_compra", $novaCompra);
+// Criar compra com return=representation para obter ID
+$resCompra = supabase("POST", "tbl_compra?select=id_compra", $novaCompra, [
+    'return_representation' => true
+]);
 
-error_log("RESPOSTA SUPABASE: " . print_r($resCompra, true));
+error_log("RESPOSTA SUPABASE (criar compra): " . print_r($resCompra, true));
 
-if (!isset($resCompra["status"]) || $resCompra["status"] < 200 || $resCompra["status"] >= 300) {
-    echo json_encode(["success" => false, "error" => "Erro ao criar compra", "debug" => $resCompra]);
+if ($resCompra["status"] !== 201 && $resCompra["status"] !== 200) {
+    echo json_encode([
+        "success" => false, 
+        "error" => "Erro ao criar compra. Status: " . $resCompra["status"],
+        "debug" => $resCompra
+    ]);
     exit();
 }
 
-// Obter ID da compra
+// Obter ID da compra da resposta
 $id_compra = null;
 
-// Tentar diferentes formatos de resposta
-if (isset($resCompra["data"]) && is_array($resCompra["data"])) {
-    if (!empty($resCompra["data"]) && isset($resCompra["data"][0]["id_compra"])) {
+if (isset($resCompra["data"]) && is_array($resCompra["data"]) && !empty($resCompra["data"])) {
+    if (isset($resCompra["data"][0]["id_compra"])) {
         $id_compra = (int)$resCompra["data"][0]["id_compra"];
-    } elseif (isset($resCompra["data"]["id_compra"])) {
-        $id_compra = (int)$resCompra["data"]["id_compra"];
     }
-} elseif (isset($resCompra["id_compra"])) {
-    $id_compra = (int)$resCompra["id_compra"];
 }
 
 error_log("ID COMPRA OBTIDO: " . $id_compra);
 
-if (!$id_compra || $id_compra <= 0) {
-    echo json_encode([
-        "success" => false, 
-        "error" => "Falha ao obter ID da compra: " . $id_compra,
-        "debug_response" => $resCompra
-    ]);
-    exit();
+if (!$id_compra) {
+    // Se não conseguirmos obter o ID da resposta, fazer uma consulta para pegar o último ID
+    error_log("Tentando obter último ID da compra via consulta...");
+    
+    // Consultar a última compra deste cliente
+    $resUltimaCompra = supabase("GET", "tbl_compra?id_cliente=eq.$id_cliente&order=id_compra.desc&limit=1");
+    
+    if (isset($resUltimaCompra["data"]) && is_array($resUltimaCompra["data"]) && !empty($resUltimaCompra["data"])) {
+        $id_compra = (int)$resUltimaCompra["data"][0]["id_compra"];
+        error_log("ID obtido via consulta: " . $id_compra);
+    }
+    
+    if (!$id_compra) {
+        echo json_encode([
+            "success" => false, 
+            "error" => "Falha ao obter ID da compra",
+            "debug_response" => $resCompra,
+            "ultima_consulta" => $resUltimaCompra ?? null
+        ]);
+        exit();
+    }
 }
 
 // =====================
@@ -106,7 +121,8 @@ foreach ($itens as $index => $item) {
         echo json_encode([
             "success" => false, 
             "error" => "Erro ao registrar item no histórico",
-            "item" => $item
+            "item" => $item,
+            "debug" => $resHist
         ]);
         exit();
     }
@@ -117,7 +133,8 @@ foreach ($itens as $index => $item) {
     if (empty($resProd["data"])) {
         echo json_encode([
             "success" => false, 
-            "error" => "Produto não encontrado: $id_produto"
+            "error" => "Produto não encontrado: $id_produto",
+            "debug" => $resProd
         ]);
         exit();
     }
@@ -128,7 +145,9 @@ foreach ($itens as $index => $item) {
     if ($novoEstoque < 0) {
         echo json_encode([
             "success" => false, 
-            "error" => "Estoque insuficiente para produto: $id_produto"
+            "error" => "Estoque insuficiente para produto: $id_produto",
+            "estoque_atual" => $estoqueAtual,
+            "quantidade" => $quantidade
         ]);
         exit();
     }
@@ -138,7 +157,8 @@ foreach ($itens as $index => $item) {
     if ($resUpdate["status"] >= 400) {
         echo json_encode([
             "success" => false, 
-            "error" => "Erro ao atualizar estoque"
+            "error" => "Erro ao atualizar estoque",
+            "debug" => $resUpdate
         ]);
         exit();
     }
@@ -152,7 +172,8 @@ $updateCompra = supabase("PATCH", "tbl_compra?id_compra=eq.$id_compra", ["valor_
 if ($updateCompra["status"] >= 400) {
     echo json_encode([
         "success" => false, 
-        "error" => "Erro ao atualizar valor total"
+        "error" => "Erro ao atualizar valor total",
+        "debug" => $updateCompra
     ]);
     exit();
 }
