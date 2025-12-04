@@ -48,7 +48,12 @@ function supabase($method, $endpoint, $body = null)
 // 🔀 Roteamento simples
 $path = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
 
-if (str_contains($path, "produtos")) {
+if (str_contains($path, "produtos-categoria")) {
+    include "produtos-categoria.php";
+    exit;
+}
+
+if (preg_match("/produtos(\.php)?$/", $path)) {
     include "produtos.php";
     exit;
 }
