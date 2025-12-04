@@ -1,4 +1,5 @@
 <?php
+// busca.php
 // Configurações iniciais e CORS
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
@@ -13,39 +14,8 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     exit();
 }
 
-// --- CONFIGURAÇÃO SUPABASE ---
-$SUPABASE_URL = "https://ecbgnduxbpgxyajevdgz.supabase.co";
-$SUPABASE_KEY = "sb_secret_kusL9WUkSpcaperk1hTgIQ_qhV3Wo4u";
-
-// Função genérica para chamadas Supabase
-function supabase($method, $endpoint, $body = null) {
-    global $SUPABASE_URL, $SUPABASE_KEY;
-
-    $url = rtrim($SUPABASE_URL, '/') . '/rest/v1/' . ltrim($endpoint, '/');
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "apikey: $SUPABASE_KEY",
-        "Authorization: Bearer $SUPABASE_KEY",
-        "Content-Type: application/json",
-        "Prefer: return=representation"
-    ]);
-
-    if ($body) {
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
-    }
-
-    $response = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-    if ($response === false) {
-        return ["status" => 500, "data" => ["error" => curl_error($ch)]];
-    }
-
-    curl_close($ch);
-    return ["status" => $status, "data" => json_decode($response, true)];
-}
+// Incluir o arquivo supabase.php que já tem a função
+require_once __DIR__ . "/supabase.php";
 
 // --- Lógica principal da busca ---
 if ($_SERVER["REQUEST_METHOD"] !== "GET") {
