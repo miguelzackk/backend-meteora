@@ -21,7 +21,6 @@ function supabase_fetch($url, $apikey) {
 }
 
 try {
-    // 1️⃣ Buscar todos os produtos
     $url = $SUPABASE_URL . "/rest/v1/tbl_produto?select=*";
     $produtos = supabase_fetch($url, $SUPABASE_KEY);
 
@@ -30,7 +29,6 @@ try {
         exit;
     }
 
-    // 2️⃣ Agrupar por categoria e pegar o produto com menor id_produto
     $categorias = [];
     foreach ($produtos as $p) {
         $cat = $p['categoria'];
@@ -39,10 +37,8 @@ try {
         }
     }
 
-    // 3️⃣ Pegar os primeiros até 6
     $resultado = array_slice(array_values($categorias), 0, 6);
 
-    // 4️⃣ Se tiver menos de 6, preencher com produtos extras (ou repetir se necessário)
     if (count($resultado) < 6) {
         $faltam = 6 - count($resultado);
         $ids_existentes = array_column($resultado, 'id_produto');
@@ -56,13 +52,13 @@ try {
             }
         }
 
-        // Se ainda tiver menos de 6, repetir produtos existentes
+
         while (count($resultado) < 6) {
             $resultado[] = $resultado[count($resultado) % count($resultado)];
         }
     }
 
-    // 5️⃣ Retornar exatamente 6 produtos no JSON
+
     echo json_encode(array_slice($resultado, 0, 6));
 
 } catch (Exception $e) {

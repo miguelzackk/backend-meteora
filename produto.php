@@ -34,3 +34,4 @@ if (empty($produtos)) {
 }
 
 echo json_encode($produtos[0]);
+// NÃO ADICIONE HTML AQUI - este arquivo deve ser apenas API
