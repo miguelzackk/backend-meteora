@@ -65,11 +65,6 @@ if (preg_match("/produtos(\.php)?$/", $path)) {
     exit;
 }
 
-if (preg_match("/categorias(\.php)?$/", $path)) {
-    include "categorias.php";
-    exit;
-}
-
 if (preg_match("/busca(\.php)?$/", $path)) {
     include "busca.php";
     exit;
