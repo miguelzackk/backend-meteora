@@ -1,10 +1,13 @@
 <?php
-// Exibir erros em modo debug
+// =====================
+// ATUALIZAR PERFIL DO CLIENTE
+// =====================
+
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 header("Access-Control-Allow-Origin: *");
-header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json; charset=UTF-8");
 
@@ -14,39 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// --- CONFIGURAÇÃO SUPABASE ---
-$SUPABASE_URL = "https://ecbgnduxbpgxyajevdgz.supabase.co";
-$SUPABASE_KEY = "sb_secret_kusL9WUkSpcaperk1hTgIQ_qhV3Wo4u";
-
-// Função auxiliar de comunicação com Supabase
-function supabase($method, $endpoint, $body = null) {
-    global $SUPABASE_URL, $SUPABASE_KEY;
-
-    $url = rtrim($SUPABASE_URL, '/') . '/rest/v1/' . ltrim($endpoint, '/');
-    $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "apikey: $SUPABASE_KEY",
-        "Authorization: Bearer $SUPABASE_KEY",
-        "Content-Type: application/json",
-        "Prefer: return=representation"
-    ]);
-
-    if ($body) {
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
-    }
-
-    $response = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-    if ($response === false) {
-        return ["status" => 500, "data" => ["error" => curl_error($ch)]];
-    }
-
-    curl_close($ch);
-    return ["status" => $status, "data" => json_decode($response, true)];
-}
+// Incluir o arquivo principal que já tem a função supabase()
+require_once __DIR__ . "/supabase.php";
 
 // --- BLOCO PRINCIPAL ---
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
@@ -55,7 +27,14 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 }
 
 // Lê JSON enviado
-$data = json_decode(file_get_contents("php://input"), true);
+$input = file_get_contents("php://input");
+error_log("Dados recebidos: " . $input);
+$data = json_decode($input, true);
+
+if (json_last_error() !== JSON_ERROR_NONE) {
+    echo json_encode(["success" => false, "message" => "JSON inválido"]);
+    exit();
+}
 
 $id_cliente = $data["id_cliente"] ?? null;
 $nome = trim($data["nome"] ?? "");
@@ -74,12 +53,12 @@ $updateBody = [
     "sobrenome" => $sobrenome
 ];
 
-// Atualiza senha apenas se informada
+// Atualiza senha apenas se informada (SEM HASH)
 if ($senha && strlen($senha) > 0) {
-    // 🔒 Aqui você pode aplicar hash se quiser armazenar senhas seguras
-    // $updateBody["senha"] = password_hash($senha, PASSWORD_DEFAULT);
-    $updateBody["senha"] = $senha;
+    $updateBody["senha"] = $senha; // Senha em texto puro
 }
+
+error_log("Atualizando cliente $id_cliente com dados: " . print_r($updateBody, true));
 
 // 1️⃣ Atualizar cliente no Supabase
 $response = supabase(
@@ -88,12 +67,15 @@ $response = supabase(
     $updateBody
 );
 
+error_log("Resposta Supabase: " . print_r($response, true));
+
 // 2️⃣ Verificar resultado
 if ($response["status"] >= 400) {
     echo json_encode([
         "success" => false,
         "message" => "Erro ao atualizar perfil",
-        "debug" => $response
+        "error" => $response["data"]["message"] ?? "Erro desconhecido",
+        "status_code" => $response["status"]
     ]);
     exit();
 }
@@ -101,6 +83,11 @@ if ($response["status"] >= 400) {
 // 3️⃣ Retorno final
 echo json_encode([
     "success" => true,
-    "message" => "Perfil atualizado com sucesso!"
+    "message" => "Perfil atualizado com sucesso!",
+    "cliente" => [
+        "id_cliente" => $id_cliente,
+        "nome" => $nome,
+        "sobrenome" => $sobrenome
+    ]
 ]);
 ?>
