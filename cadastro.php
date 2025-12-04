@@ -71,20 +71,15 @@ try {
         exit();
     }
 
-    // 2️⃣ Criar hash da senha
-    $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
+    // 2️⃣ REMOVIDO: Não criar hash da senha
+    // $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
     
-    // Verificar se o hash foi gerado corretamente
-    if (!$senhaHash) {
-        throw new Exception("Erro ao gerar hash da senha");
-    }
-
-    // 3️⃣ Inserir novo cliente
+    // 3️⃣ Inserir novo cliente COM SENHA EM TEXTO PLANO
     $insert = supabase("POST", "tbl_cliente", [
         "nome" => $nome,
         "sobrenome" => $sobrenome,
         "gmail" => $gmail,
-        "senha" => $senhaHash  // Corrigido: usando a variável definida acima
+        "senha" => $senha  // Texto plano - sem criptografia
     ]);
 
     if ($insert["status"] >= 200 && $insert["status"] < 300) {
