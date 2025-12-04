@@ -15,7 +15,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require __DIR__ . "/supabase.php";
 
-
 // --- PROCESSAMENTO PRINCIPAL ---
 try {
     // Ler o JSON recebido
@@ -72,12 +71,20 @@ try {
         exit();
     }
 
-    // 2️⃣ Inserir novo cliente
+    // 2️⃣ Criar hash da senha
+    $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
+    
+    // Verificar se o hash foi gerado corretamente
+    if (!$senhaHash) {
+        throw new Exception("Erro ao gerar hash da senha");
+    }
+
+    // 3️⃣ Inserir novo cliente
     $insert = supabase("POST", "tbl_cliente", [
         "nome" => $nome,
         "sobrenome" => $sobrenome,
         "gmail" => $gmail,
-        "senha" => $senhaHash
+        "senha" => $senhaHash  // Corrigido: usando a variável definida acima
     ]);
 
     if ($insert["status"] >= 200 && $insert["status"] < 300) {
@@ -92,7 +99,7 @@ try {
         echo json_encode([
             "success" => false,
             "message" => "Erro ao criar conta no banco de dados",
-            "debug" => $insert["data"]
+            "debug" => $insert["data"] ?? "Sem dados de resposta"
         ]);
     }
 
