@@ -1,5 +1,5 @@
 <?php
-// Mostrar erros para debug
+
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -14,11 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Configuração da Supabase
 $SUPABASE_URL = "https://ecbgnduxbpgxyajevdgz.supabase.co";
 $SUPABASE_KEY = "sb_secret_kusL9WUkSpcaperk1hTgIQ_qhV3Wo4u";
 
-// Função auxiliar genérica para chamadas HTTP na API do Supabase
+
 function supabase($method, $endpoint, $body = null) {
     global $SUPABASE_URL, $SUPABASE_KEY;
 
@@ -58,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-// Ler corpo JSON enviado pelo fetch
+
 $data = json_decode(file_get_contents('php://input'), true);
 
 if (!$data || !isset($data['id_produto']) || !isset($data['quantidade'])) {
@@ -69,7 +68,7 @@ if (!$data || !isset($data['id_produto']) || !isset($data['quantidade'])) {
 $id_produto = (int)$data['id_produto'];
 $quantidade = (int)$data['quantidade'];
 
-// 1️⃣ Buscar o produto no Supabase
+
 $response = supabase("GET", "tbl_produto?id_produto=eq.$id_produto&select=estoque,id_produto");
 
 if ($response["status"] !== 200 || empty($response["data"])) {
@@ -88,7 +87,7 @@ if ($novoEstoque < 0) {
     exit();
 }
 
-// 2️⃣ Atualizar estoque no Supabase
+
 $update = supabase("PATCH", "tbl_produto?id_produto=eq.$id_produto", ["estoque" => $novoEstoque]);
 
 if ($update["status"] >= 400) {
@@ -96,7 +95,7 @@ if ($update["status"] >= 400) {
     exit();
 }
 
-// 3️⃣ Retorno final
+
 echo json_encode([
     'success' => true,
     'id_produto' => $id_produto,

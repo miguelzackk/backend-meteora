@@ -27,7 +27,7 @@ if (!$email || !$senha) {
     exit();
 }
 
-// 1️⃣ Buscar usuário pelo email
+
 $response = supabase(
     "GET",
     "tbl_cliente?select=*&gmail=eq.$email"
@@ -46,14 +46,12 @@ if (empty($usuarios)) {
 }
 
 $usuario = $usuarios[0];
-
-// 2️⃣ Comparar senha (sem hash, como você pediu)
 if ($senha !== $usuario["senha"]) {
     echo json_encode(["success" => false, "message" => "Email ou senha incorretos"]);
     exit();
 }
 
-// 3️⃣ Remover senha antes de retornar
+
 unset($usuario["senha"]);
 
 echo json_encode([

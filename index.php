@@ -14,10 +14,9 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 // Incluir a função supabase centralizada
 require_once __DIR__ . "/supabase.php";
 
-// 🚦 Roteamento simples
 $path = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
 
-// 👉 Rotas específicas
+
 if (str_contains($path, "produtos-categoria")) {
     include "produtos-categoria.php";
     exit;
@@ -68,6 +67,6 @@ if (preg_match("/listar-historico(\.php)?$/", $path)) {
     exit;
 }
 
-// 🟢 Resposta padrão
+
 echo json_encode(["message" => "🚀 API do Meteora está online e funcionando!"]);
 ?>

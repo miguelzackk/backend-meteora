@@ -1,6 +1,5 @@
 <?php
-// busca.php
-// Configurações iniciais e CORS
+
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -14,10 +13,10 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     exit();
 }
 
-// Incluir o arquivo supabase.php que já tem a função
+
 require_once __DIR__ . "/supabase.php";
 
-// --- Lógica principal da busca ---
+
 if ($_SERVER["REQUEST_METHOD"] !== "GET") {
     echo json_encode(["error" => "Método inválido"]);
     exit();
@@ -25,7 +24,7 @@ if ($_SERVER["REQUEST_METHOD"] !== "GET") {
 
 $termo = $_GET["q"] ?? "";
 
-// 1️⃣ Se não há termo de busca, retorna todos os produtos
+
 if (trim($termo) === "") {
     $response = supabase("GET", "tbl_produto?select=*");
     http_response_code($response["status"]);
@@ -33,8 +32,7 @@ if (trim($termo) === "") {
     exit();
 }
 
-// 2️⃣ Se há termo, aplica busca com filtros OR e ILIKE
-// Importante: urlencode para caracteres especiais
+
 $termoEncoded = rawurlencode($termo);
 
 $endpoint = "tbl_produto?select=*"
@@ -42,7 +40,7 @@ $endpoint = "tbl_produto?select=*"
 
 $response = supabase("GET", $endpoint);
 
-// 3️⃣ Retornar resultado
+
 http_response_code($response["status"]);
 echo json_encode($response["data"]);
 ?>

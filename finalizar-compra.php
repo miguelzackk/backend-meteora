@@ -1,7 +1,4 @@
 <?php
-// =====================
-// FINALIZAR COMPRA VIA SUPABASE
-// =====================
 
 ini_set("display_errors", 1);
 error_reporting(E_ALL);
@@ -19,9 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 
 require_once __DIR__ . "/supabase.php";
 
-// =====================
-// LER BODY JSON
-// =====================
+
 $input = file_get_contents("php://input");
 error_log("RAW INPUT: " . $input);
 $input = json_decode($input, true);
@@ -36,9 +31,7 @@ $id_cliente = (int)$input["id_cliente"];
 $itens = $input["itens"];
 $valor_total = 0;
 
-// =====================
-// 1) CRIAR COMPRA PRINCIPAL
-// =====================
+
 $novaCompra = [
     "id_cliente"   => $id_cliente,
     "data_compra"  => date("Y-m-d H:i:s"),
@@ -95,9 +88,6 @@ if (!$id_compra) {
     }
 }
 
-// =====================
-// 2) PROCESSAR ITENS
-// =====================
 foreach ($itens as $index => $item) {
     $id_produto = (int)$item["id_produto"];
     $quantidade = (int)$item["quantidade"];
@@ -164,9 +154,7 @@ foreach ($itens as $index => $item) {
     }
 }
 
-// =====================
-// 3) ATUALIZAR VALOR TOTAL
-// =====================
+
 $updateCompra = supabase("PATCH", "tbl_compra?id_compra=eq.$id_compra", ["valor_total" => $valor_total]);
 
 if ($updateCompra["status"] >= 400) {
@@ -178,9 +166,6 @@ if ($updateCompra["status"] >= 400) {
     exit();
 }
 
-// =====================
-// 4) RESPOSTA FINAL
-// =====================
 echo json_encode([
     "success" => true,
     "message" => "Compra finalizada com sucesso!",

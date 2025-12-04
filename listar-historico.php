@@ -1,7 +1,5 @@
 <?php
-// =====================
-// LISTAR HISTÓRICO DE COMPRAS (SUPABASE) - VERSÃO CORRIGIDA
-// =====================
+
 
 ini_set("display_errors", 1);
 error_reporting(E_ALL);
@@ -19,9 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 
 require_once __DIR__ . "/supabase.php";
 
-// =====================
-// Parâmetro: id_cliente
-// =====================
+
 $id_cliente = isset($_GET["id_cliente"]) ? (int)$_GET["id_cliente"] : 0;
 
 if ($id_cliente <= 0) {
@@ -30,9 +26,6 @@ if ($id_cliente <= 0) {
     exit();
 }
 
-// =====================
-// BUSCAR COMPRAS DO CLIENTE
-// =====================
 error_log("Buscando histórico para cliente ID: " . $id_cliente);
 
 // Primeiro buscar as compras do cliente
@@ -62,9 +55,7 @@ if (empty($compras)) {
     exit();
 }
 
-// =====================
-// BUSCAR ITENS DE CADA COMPRA
-// =====================
+
 $historico = [];
 
 foreach ($compras as $compra) {
