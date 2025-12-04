@@ -9,8 +9,44 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     exit();
 }
 
-require __DIR__ . "/supabase.php";
+// 🔧 Variáveis do Supabase (Railway ou locais)
+$SUPABASE_URL = getenv("SUPABASE_URL") ?: "https://ecbgnduxbpgxyajevdgz.supabase.co";
+$SUPABASE_KEY = getenv("SUPABASE_KEY") ?: "sb_secret_kusL9WUkSpcaperk1hTgIQ_qhV3Wo4u";
 
+// 🔧 Função para requisições ao Supabase
+function supabase($method, $endpoint, $body = null)
+{
+    global $SUPABASE_URL, $SUPABASE_KEY;
+
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => "$SUPABASE_URL/rest/v1/$endpoint",
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => [
+            "apikey: $SUPABASE_KEY",
+            "Authorization: Bearer $SUPABASE_KEY",
+            "Content-Type: application/json"
+        ],
+        CURLOPT_CUSTOMREQUEST => $method,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false
+    ]);
+
+    if ($body !== null) {
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
+    }
+
+    $response = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    return [
+        "status" => $code,
+        "data" => json_decode($response, true)
+    ];
+}
+
+// 🟣 Verifica parâmetro
 if (!isset($_GET["categoria"]) || empty(trim($_GET["categoria"]))) {
     echo json_encode(["error" => "Categoria não especificada"]);
     exit();
@@ -18,17 +54,14 @@ if (!isset($_GET["categoria"]) || empty(trim($_GET["categoria"]))) {
 
 $categoria = trim($_GET["categoria"]);
 
-// ✅ Formata corretamente o filtro ilike do Supabase
-// Ele precisa ser sem encoding do asterisco (*)
-$filtro = urlencode($categoria);
+// ✅ Filtro Supabase
+$filtro = str_replace(" ", "%20", $categoria);
 $endpoint = "tbl_produto?select=*&categoria=ilike.*{$filtro}*&order=id_produto.asc";
 
-// 🔍 Faz requisição
+// 🔍 Busca os dados
 $response = supabase("GET", $endpoint);
 
-// 🚨 Debug opcional: mostrar endpoint usado (pode remover depois)
-# echo json_encode(["endpoint" => $endpoint, "response" => $response]);
-
+// 🚀 Retorno
 if (!isset($response["data"]) || !is_array($response["data"])) {
     echo json_encode(["error" => "Erro ao buscar produtos", "debug" => $response]);
     exit();
