@@ -60,9 +60,6 @@ try {
         exit();
     }
 
-    // Criptografar senha
-    $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
-
     // 1️⃣ Verificar se já existe cliente com este email
     $check = supabase("GET", "tbl_cliente?gmail=eq.$gmail&select=id_cliente");
     
