@@ -9,41 +9,8 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     exit();
 }
 
-// Variáveis do Railway
-$SUPABASE_URL = getenv("SUPABASE_URL");
-$SUPABASE_KEY = getenv("SUPABASE_KEY");
+require_once __DIR__ . '/supabase.php';
 
-function supabase($method, $endpoint, $body = null)
-{
-    global $SUPABASE_URL, $SUPABASE_KEY;
-
-    $ch = curl_init();
-    curl_setopt_array($ch, [
-        CURLOPT_URL => "$SUPABASE_URL/rest/v1/$endpoint",
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => [
-            "apikey: $SUPABASE_KEY",
-            "Authorization: Bearer $SUPABASE_KEY",
-            "Content-Type: application/json"
-        ],
-        CURLOPT_CUSTOMREQUEST => $method,
-        CURLOPT_SSL_VERIFYPEER => false, // Railway SSL fix
-        CURLOPT_SSL_VERIFYHOST => false
-    ]);
-
-    if ($body !== null) {
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
-    }
-
-    $response = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-
-    return [
-        "status" => $code,
-        "data" => json_decode($response, true)
-    ];
-}
 
 // 🔀 Roteamento simples
 $path = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
