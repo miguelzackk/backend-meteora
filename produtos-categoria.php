@@ -11,8 +11,7 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 
 require_once __DIR__ . '/supabase.php';
 
-
-// 🟣 Verifica parâmetro
+// Verifica parâmetro
 if (!isset($_GET["categoria"]) || empty(trim($_GET["categoria"]))) {
     echo json_encode(["error" => "Categoria não especificada"]);
     exit();
@@ -20,14 +19,19 @@ if (!isset($_GET["categoria"]) || empty(trim($_GET["categoria"]))) {
 
 $categoria = trim($_GET["categoria"]);
 
-// ✅ Filtro Supabase
-$filtro = str_replace(" ", "%20", $categoria);
-$endpoint = "tbl_produto?select=*&categoria=ilike.*{$filtro}*&order=id_produto.asc";
+// Codifica corretamente acentos, espaços e caracteres especiais
+$categoriaEncoded = rawurlencode("*" . $categoria . "*");
 
-// 🔍 Busca os dados
+// Monta endpoint com filtro usando ilike (case-insensitive, com curingas)
+$endpoint = "tbl_produto?select=*&categoria=ilike.$categoriaEncoded&order=id_produto.asc";
+
+// Log opcional (para debug no Railway)
+error_log(" Endpoint Supabase: $endpoint");
+
+//  Busca os dados
 $response = supabase("GET", $endpoint);
 
-// 🚀 Retorno
+//  Verifica retorno
 if (!isset($response["data"]) || !is_array($response["data"])) {
     echo json_encode(["error" => "Erro ao buscar produtos", "debug" => $response]);
     exit();
@@ -38,4 +42,6 @@ if (empty($response["data"])) {
     exit();
 }
 
+//  Retorna os produtos encontrados
 echo json_encode($response["data"], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+?>
