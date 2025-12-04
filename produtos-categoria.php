@@ -11,7 +11,6 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 
 require __DIR__ . "/supabase.php";
 
-// Verifica se a categoria foi passada
 if (!isset($_GET["categoria"]) || empty(trim($_GET["categoria"]))) {
     echo json_encode(["error" => "Categoria não especificada"]);
     exit();
@@ -19,26 +18,25 @@ if (!isset($_GET["categoria"]) || empty(trim($_GET["categoria"]))) {
 
 $categoria = trim($_GET["categoria"]);
 
-// 🔍 Usar `ilike.*valor*` — o formato correto do Supabase
-$categoriaFiltro = rawurlencode("*" . $categoria . "*");
+// ✅ Formata corretamente o filtro ilike do Supabase
+// Ele precisa ser sem encoding do asterisco (*)
+$filtro = urlencode($categoria);
+$endpoint = "tbl_produto?select=*&categoria=ilike.*{$filtro}*&order=id_produto.asc";
 
-// Monta o endpoint completo
-$endpoint = "tbl_produto?select=*&categoria=ilike.$categoriaFiltro&order=id_produto.asc";
-
-// Faz a requisição
+// 🔍 Faz requisição
 $response = supabase("GET", $endpoint);
 
-// Verifica a resposta
+// 🚨 Debug opcional: mostrar endpoint usado (pode remover depois)
+# echo json_encode(["endpoint" => $endpoint, "response" => $response]);
+
 if (!isset($response["data"]) || !is_array($response["data"])) {
     echo json_encode(["error" => "Erro ao buscar produtos", "debug" => $response]);
     exit();
 }
 
-// Nenhum produto encontrado
 if (empty($response["data"])) {
     echo json_encode(["warning" => "Nenhum produto encontrado nesta categoria"]);
     exit();
 }
 
-// ✅ Retorna produtos encontrados
 echo json_encode($response["data"], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
