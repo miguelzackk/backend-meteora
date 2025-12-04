@@ -13,105 +13,98 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// --- CONFIGURAÇÃO SUPABASE ---
-$SUPABASE_URL = "https://ecbgnduxbpgxyajevdgz.supabase.co";
-$SUPABASE_KEY = "sb_secret_kusL9WUkSpcaperk1hTgIQ_qhV3Wo4u";
+require __DIR__ . "/supabase.php";
 
-// Função genérica para chamadas ao Supabase
-function supabase($method, $endpoint, $body = null)
-{
-    global $SUPABASE_URL, $SUPABASE_KEY;
-
-    $url = rtrim($SUPABASE_URL, '/') . '/rest/v1/' . ltrim($endpoint, '/');
-    $ch = curl_init($url);
-
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CUSTOMREQUEST => $method,
-        CURLOPT_HTTPHEADER => [
-            "apikey: $SUPABASE_KEY",
-            "Authorization: Bearer $SUPABASE_KEY",
-            "Content-Type: application/json",
-            "Prefer: return=representation"
-        ],
-        CURLOPT_SSL_VERIFYPEER => false,
-        CURLOPT_SSL_VERIFYHOST => false
-    ]);
-
-    if ($body) {
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body));
-    }
-
-    $response = curl_exec($ch);
-    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-    if ($response === false) {
-        return ["status" => 500, "data" => ["error" => curl_error($ch)]];
-    }
-
-    curl_close($ch);
-    return ["status" => $status, "data" => json_decode($response, true)];
-}
 
 // --- PROCESSAMENTO PRINCIPAL ---
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(["success" => false, "message" => "Método inválido"]);
-    exit();
-}
+try {
+    // Ler o JSON recebido
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
 
-// Ler o JSON recebido
-$data = json_decode(file_get_contents('php://input'), true);
+    if ($data === null) {
+        throw new Exception("JSON inválido");
+    }
 
-// ✅ Corrigido: front envia "email", banco usa "gmail"
-$nome = trim($data["nome"] ?? "");
-$sobrenome = trim($data["sobrenome"] ?? "");
-$gmail = trim($data["email"] ?? ""); // compatível com frontend
-$senha = $data["senha"] ?? "";
+    // Obter dados
+    $nome = trim($data["nome"] ?? "");
+    $sobrenome = trim($data["sobrenome"] ?? "");
+    $gmail = trim($data["email"] ?? ""); // frontend usa "email", banco usa "gmail"
+    $senha = $data["senha"] ?? "";
 
-// 🔐 (opcional) Criptografar senha
-$senhaHash = password_hash($senha, PASSWORD_DEFAULT);
+    // Validação básica
+    if (!$nome || !$sobrenome || !$gmail || !$senha) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "message" => "Todos os campos são obrigatórios"
+        ]);
+        exit();
+    }
 
-// 🚫 Validação de campos obrigatórios
-if (!$nome || !$sobrenome || !$gmail || !$senha) {
-    http_response_code(400);
-    echo json_encode(["success" => false, "message" => "Campos incompletos"]);
-    exit();
-}
+    if (!filter_var($gmail, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "message" => "Email inválido"
+        ]);
+        exit();
+    }
 
-// 1️⃣ Verificar se já existe cliente com este gmail
-$gmailEncoded = rawurlencode($gmail);
-$check = supabase("GET", "tbl_cliente?select=id_cliente&gmail=eq.$gmailEncoded");
+    if (strlen($senha) < 6) {
+        http_response_code(400);
+        echo json_encode([
+            "success" => false,
+            "message" => "Senha deve ter pelo menos 6 caracteres"
+        ]);
+        exit();
+    }
 
-if (isset($check["data"]) && is_array($check["data"]) && count($check["data"]) > 0) {
-    http_response_code(409);
-    echo json_encode([
-        "success" => false,
-        "message" => "Este email já está cadastrado"
+    // Criptografar senha
+    $senhaHash = password_hash($senha, PASSWORD_DEFAULT);
+
+    // 1️⃣ Verificar se já existe cliente com este email
+    $check = supabase("GET", "tbl_cliente?gmail=eq.$gmail&select=id_cliente");
+    
+    if ($check["status"] === 200 && is_array($check["data"]) && count($check["data"]) > 0) {
+        http_response_code(409);
+        echo json_encode([
+            "success" => false,
+            "message" => "Este email já está cadastrado"
+        ]);
+        exit();
+    }
+
+    // 2️⃣ Inserir novo cliente
+    $insert = supabase("POST", "tbl_cliente", [
+        "nome" => $nome,
+        "sobrenome" => $sobrenome,
+        "gmail" => $gmail,
+        "senha" => $senhaHash
     ]);
-    exit();
-}
 
-// 2️⃣ Inserir novo cliente
-$insert = supabase("POST", "tbl_cliente", [
-    "nome" => $nome,
-    "sobrenome" => $sobrenome,
-    "gmail" => $gmail, // mantém nome da coluna do banco
-    "senha" => $senhaHash
-]);
+    if ($insert["status"] >= 200 && $insert["status"] < 300) {
+        http_response_code(201);
+        echo json_encode([
+            "success" => true,
+            "message" => "Conta criada com sucesso!"
+        ]);
+    } else {
+        error_log("Erro Supabase: " . print_r($insert, true));
+        http_response_code(500);
+        echo json_encode([
+            "success" => false,
+            "message" => "Erro ao criar conta no banco de dados",
+            "debug" => $insert["data"]
+        ]);
+    }
 
-if ($insert["status"] >= 200 && $insert["status"] < 300) {
-    http_response_code(201);
-    echo json_encode([
-        "success" => true,
-        "message" => "Conta criada com sucesso!"
-    ]);
-} else {
+} catch (Exception $e) {
+    error_log("Erro no cadastro: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "message" => "Erro ao criar conta",
-        "debug" => $insert // para visualizar erro nos logs do Railway
+        "message" => "Erro interno do servidor: " . $e->getMessage()
     ]);
 }
 ?>
