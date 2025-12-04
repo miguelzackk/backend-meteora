@@ -1,37 +1,62 @@
 <?php
-include 'database.php';
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: POST, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Content-Type: application/json; charset=utf-8");
 
-header('Access-Control-Allow-Origin: *');
-header('Content-Type: application/json');
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $data = json_decode(file_get_contents('php://input'), true);
-    
-    $email = $data['email'] ?? '';
-    $senha = $data['senha'] ?? '';
-    
-    try {
-        $stmt = $pdo->prepare("SELECT * FROM tbl_cliente WHERE gmail = ?");
-        $stmt->execute([$email]);
-        $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($usuario && $senha === $usuario['senha']) { // Em produção, use password_hash()
-            unset($usuario['senha']); // Remove a senha da resposta
-            echo json_encode([
-                'success' => true,
-                'usuario' => $usuario
-            ]);
-        } else {
-            echo json_encode([
-                'success' => false,
-                'message' => 'Email ou senha incorretos'
-            ]);
-        }
-    } catch(PDOException $e) {
-        echo json_encode([
-            'success' => false,
-            'message' => 'Erro no servidor'
-        ]);
-    }
+if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
+    http_response_code(200);
+    exit();
 }
-?>
+
+require __DIR__ . "/supabase.php";
+
+if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    echo json_encode(["success" => false, "message" => "Método inválido"]);
+    exit();
+}
+
+$data = json_decode(file_get_contents("php://input"), true);
+
+$email = $data["email"] ?? "";
+$senha = $data["senha"] ?? "";
+
+// Validação simples
+if (!$email || !$senha) {
+    echo json_encode(["success" => false, "message" => "Campos incompletos"]);
+    exit();
+}
+
+// 1️⃣ Buscar usuário pelo email
+$response = supabase(
+    "GET",
+    "tbl_cliente?select=*&gmail=eq.$email"
+);
+
+if ($response["status"] >= 400) {
+    echo json_encode(["success" => false, "message" => "Erro ao acessar o banco", "debug" => $response]);
+    exit();
+}
+
+$usuarios = $response["data"] ?? [];
+
+if (empty($usuarios)) {
+    echo json_encode(["success" => false, "message" => "Email ou senha incorretos"]);
+    exit();
+}
+
+$usuario = $usuarios[0];
+
+// 2️⃣ Comparar senha (sem hash, como você pediu)
+if ($senha !== $usuario["senha"]) {
+    echo json_encode(["success" => false, "message" => "Email ou senha incorretos"]);
+    exit();
+}
+
+// 3️⃣ Remover senha antes de retornar
+unset($usuario["senha"]);
+
+echo json_encode([
+    "success" => true,
+    "usuario" => $usuario
+]);

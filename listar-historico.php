@@ -1,38 +1,28 @@
 <?php
 // =====================
-// LISTAR HISTÓRICO DE COMPRAS
+// LISTAR HISTÓRICO DE COMPRAS (SUPABASE)
 // =====================
 
-// CORS
-header('Access-Control-Allow-Origin: http://127.0.0.1:5500');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
-header('Access-Control-Allow-Credentials: true');
-header('Content-Type: application/json; charset=utf-8');
+ini_set("display_errors", 1);
+error_reporting(E_ALL);
 
-// Preflight
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+header("Access-Control-Allow-Credentials: true");
+header("Content-Type: application/json; charset=utf-8");
+
+if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
     http_response_code(200);
     exit();
 }
 
-// Conexão
-$host = 'localhost';
-$dbname = 'ecommerce_vestes_moda';
-$username = 'root';
-$password = 'root';
+require_once __DIR__ . "/supabase.php";
 
-try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $username, $password);
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch (PDOException $e) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "error" => "Erro de conexão: " . $e->getMessage()]);
-    exit();
-}
-
+// =====================
 // Parâmetro: id_cliente
-$id_cliente = isset($_GET['id_cliente']) ? (int)$_GET['id_cliente'] : 0;
+// =====================
+$id_cliente = isset($_GET["id_cliente"]) ? (int)$_GET["id_cliente"] : 0;
 
 if ($id_cliente <= 0) {
     http_response_code(400);
@@ -40,57 +30,62 @@ if ($id_cliente <= 0) {
     exit();
 }
 
-try {
-    // Busca as compras e seus itens
-    $sql = "
-        SELECT 
-            c.id_compra,
-            c.data_compra,
-            c.valor_total,
-            p.nome AS nome_produto,
-            p.imagem,
-            h.quantidade,
-            h.valor_unitario
-        FROM tbl_compra c
-        JOIN tbl_historico_compra h ON h.id_compra = c.id_compra
-        JOIN tbl_produto p ON p.id_produto = h.id_produto
-        WHERE c.id_cliente = ?
-        ORDER BY c.data_compra DESC
-    ";
+// =====================
+// Buscar histórico no Supabase
+// =====================
+// Aqui usamos a sintaxe `select` com relacionamentos, que funciona no Supabase.
+// Ela permite retornar os dados de várias tabelas (JOIN implícito).
+// Veja a estrutura abaixo: 
+//   tbl_compra -> tbl_historico_compra -> tbl_produto
 
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute([$id_cliente]);
-    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$endpoint = "tbl_compra?select=id_compra,data_compra,valor_total,"
+    . "tbl_historico_compra(id_produto,quantidade,valor_unitario,"
+    . "tbl_produto(nome,imagem))"
+    . "&id_cliente=eq.$id_cliente"
+    . "&order=data_compra.desc";
 
-    if (!$rows) {
-        echo json_encode(["success" => true, "historico" => []]);
-        exit();
-    }
+$response = supabase("GET", $endpoint);
 
-    // Agrupar itens por compra
-    $historico = [];
-    foreach ($rows as $r) {
-        $id_compra = $r['id_compra'];
-        if (!isset($historico[$id_compra])) {
-            $historico[$id_compra] = [
-                "id_compra" => $id_compra,
-                "data_compra" => $r['data_compra'],
-                "valor_total" => (float)$r['valor_total'],
-                "itens" => []
+if ($response["status"] >= 400) {
+    http_response_code(500);
+    echo json_encode(["success" => false, "error" => "Erro ao buscar histórico", "debug" => $response]);
+    exit();
+}
+
+$data = $response["data"] ?? [];
+
+if (empty($data)) {
+    echo json_encode(["success" => true, "historico" => []]);
+    exit();
+}
+
+// =====================
+// Reorganizar estrutura (igual seu JSON antigo)
+// =====================
+$historico = [];
+
+foreach ($data as $compra) {
+    $compraItem = [
+        "id_compra" => $compra["id_compra"],
+        "data_compra" => $compra["data_compra"],
+        "valor_total" => (float)$compra["valor_total"],
+        "itens" => []
+    ];
+
+    if (!empty($compra["tbl_historico_compra"])) {
+        foreach ($compra["tbl_historico_compra"] as $hist) {
+            $prod = $hist["tbl_produto"] ?? [];
+
+            $compraItem["itens"][] = [
+                "nome_produto" => $prod["nome"] ?? "Produto removido",
+                "imagem" => $prod["imagem"] ?? null,
+                "quantidade" => (int)$hist["quantidade"],
+                "valor_unitario" => (float)$hist["valor_unitario"]
             ];
         }
-
-        $historico[$id_compra]["itens"][] = [
-            "nome_produto" => $r['nome_produto'],
-            "imagem" => $r['imagem'],
-            "quantidade" => (int)$r['quantidade'],
-            "valor_unitario" => (float)$r['valor_unitario']
-        ];
     }
 
-    echo json_encode(["success" => true, "historico" => array_values($historico)]);
-
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(["success" => false, "error" => $e->getMessage()]);
+    $historico[] = $compraItem;
 }
+
+echo json_encode(["success" => true, "historico" => $historico]);

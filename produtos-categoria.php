@@ -1,27 +1,33 @@
 <?php
-include 'database.php';
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Content-Type: application/json; charset=utf-8");
 
-// Permitir CORS
-header('Access-Control-Allow-Origin: *');
-header('Content-Type: application/json; charset=utf-8');
-
-try {
-    // Verificar se a categoria foi passada
-    if (!isset($_GET['categoria'])) {
-        echo json_encode(['error' => 'Categoria não especificada']);
-        exit();
-    }
-
-    $categoria = $_GET['categoria'];
-    
-    // Buscar produtos por categoria
-    $stmt = $pdo->prepare("SELECT * FROM tbl_produto WHERE categoria = ? ORDER BY id_produto");
-    $stmt->execute([$categoria]);
-    $produtos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    echo json_encode($produtos);
-    
-} catch(PDOException $e) {
-    echo json_encode(['error' => 'Erro ao buscar produtos: ' . $e->getMessage()]);
+if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
+    http_response_code(200);
+    exit();
 }
-?>
+
+require __DIR__ . "/supabase.php";
+
+// Verifica se a categoria foi passada
+if (!isset($_GET["categoria"])) {
+    echo json_encode(["error" => "Categoria não especificada"]);
+    exit();
+}
+
+$categoria = $_GET["categoria"];
+$categoriaEncoded = urlencode($categoria);
+
+// Faz a requisição ao Supabase
+$endpoint = "tbl_produto?select=*&categoria=eq.$categoriaEncoded&order=id_produto";
+
+$response = supabase("GET", $endpoint);
+
+if ($response["status"] >= 400) {
+    echo json_encode(["error" => "Erro ao buscar produtos", "debug" => $response]);
+    exit();
+}
+
+echo json_encode($response["data"]);
