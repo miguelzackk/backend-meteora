@@ -63,14 +63,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Ler o JSON recebido
 $data = json_decode(file_get_contents('php://input'), true);
 
+// ✅ Corrigido: front envia "email", banco usa "gmail"
 $nome = trim($data["nome"] ?? "");
 $sobrenome = trim($data["sobrenome"] ?? "");
-$gmail = trim($data["email"] ?? ""); // O campo do banco é "gmail"
+$gmail = trim($data["email"] ?? ""); // compatível com frontend
 $senha = $data["senha"] ?? "";
 
 // 🔐 (opcional) Criptografar senha
-$senhaHash = $senha; // ou: password_hash($senha, PASSWORD_DEFAULT)
+$senhaHash = password_hash($senha, PASSWORD_DEFAULT);
 
+// 🚫 Validação de campos obrigatórios
 if (!$nome || !$sobrenome || !$gmail || !$senha) {
     http_response_code(400);
     echo json_encode(["success" => false, "message" => "Campos incompletos"]);
@@ -94,7 +96,7 @@ if (isset($check["data"]) && is_array($check["data"]) && count($check["data"]) >
 $insert = supabase("POST", "tbl_cliente", [
     "nome" => $nome,
     "sobrenome" => $sobrenome,
-    "gmail" => $gmail,
+    "gmail" => $gmail, // mantém nome da coluna do banco
     "senha" => $senhaHash
 ]);
 
@@ -109,7 +111,7 @@ if ($insert["status"] >= 200 && $insert["status"] < 300) {
     echo json_encode([
         "success" => false,
         "message" => "Erro ao criar conta",
-        "debug" => $insert // 🔍 ajuda a ver o erro no Railway Logs
+        "debug" => $insert // para visualizar erro nos logs do Railway
     ]);
 }
 ?>
