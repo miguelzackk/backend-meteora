@@ -1,5 +1,5 @@
 <?php
-// Exibir erros durante o desenvolvimento
+// Mostrar erros durante o desenvolvimento
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -8,7 +8,6 @@ header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 header("Content-Type: application/json; charset=UTF-8");
 
-// Lidar com requisições CORS pré-flight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
@@ -18,19 +17,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $SUPABASE_URL = "https://ecbgnduxbpgxyajevdgz.supabase.co";
 $SUPABASE_KEY = "sb_secret_kusL9WUkSpcaperk1hTgIQ_qhV3Wo4u";
 
-// Função genérica para chamadas Supabase
-function supabase($method, $endpoint, $body = null) {
+// Função genérica para chamadas ao Supabase
+function supabase($method, $endpoint, $body = null)
+{
     global $SUPABASE_URL, $SUPABASE_KEY;
 
     $url = rtrim($SUPABASE_URL, '/') . '/rest/v1/' . ltrim($endpoint, '/');
     $ch = curl_init($url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "apikey: $SUPABASE_KEY",
-        "Authorization: Bearer $SUPABASE_KEY",
-        "Content-Type: application/json",
-        "Prefer: return=representation"
+
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CUSTOMREQUEST => $method,
+        CURLOPT_HTTPHEADER => [
+            "apikey: $SUPABASE_KEY",
+            "Authorization: Bearer $SUPABASE_KEY",
+            "Content-Type: application/json",
+            "Prefer: return=representation"
+        ],
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_SSL_VERIFYHOST => false
     ]);
 
     if ($body) {
@@ -55,42 +60,42 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit();
 }
 
-// Ler JSON enviado
+// Ler o JSON recebido
 $data = json_decode(file_get_contents('php://input'), true);
 
-$nome       = trim($data["nome"] ?? "");
-$sobrenome  = trim($data["sobrenome"] ?? "");
-$email      = trim($data["email"] ?? "");
-$senha      = $data["senha"] ?? "";
+$nome = trim($data["nome"] ?? "");
+$sobrenome = trim($data["sobrenome"] ?? "");
+$gmail = trim($data["email"] ?? ""); // O campo do banco é "gmail"
+$senha = $data["senha"] ?? "";
 
-// Caso deseje aplicar hash nas senhas:
-$senhaHash = $senha; // ou use password_hash($senha, PASSWORD_DEFAULT);
+// 🔐 (opcional) Criptografar senha
+$senhaHash = $senha; // ou: password_hash($senha, PASSWORD_DEFAULT)
 
-if (!$nome || !$sobrenome || !$email || !$senha) {
+if (!$nome || !$sobrenome || !$gmail || !$senha) {
     http_response_code(400);
     echo json_encode(["success" => false, "message" => "Campos incompletos"]);
     exit();
 }
 
-// 1️⃣ Verificar se o e-mail já existe
-$emailEncoded = rawurlencode($email);
-$check = supabase("GET", "tbl_cliente?select=id_cliente&gmail=eq.$emailEncoded");
+// 1️⃣ Verificar se já existe cliente com este gmail
+$gmailEncoded = rawurlencode($gmail);
+$check = supabase("GET", "tbl_cliente?select=id_cliente&gmail=eq.$gmailEncoded");
 
-if (!empty($check["data"])) {
+if (isset($check["data"]) && is_array($check["data"]) && count($check["data"]) > 0) {
     http_response_code(409);
     echo json_encode([
         "success" => false,
-        "message" => "Email já cadastrado"
+        "message" => "Este email já está cadastrado"
     ]);
     exit();
 }
 
 // 2️⃣ Inserir novo cliente
 $insert = supabase("POST", "tbl_cliente", [
-    "nome"       => $nome,
-    "sobrenome"  => $sobrenome,
-    "gmail"      => $email,
-    "senha"      => $senhaHash
+    "nome" => $nome,
+    "sobrenome" => $sobrenome,
+    "gmail" => $gmail,
+    "senha" => $senhaHash
 ]);
 
 if ($insert["status"] >= 200 && $insert["status"] < 300) {
@@ -104,7 +109,7 @@ if ($insert["status"] >= 200 && $insert["status"] < 300) {
     echo json_encode([
         "success" => false,
         "message" => "Erro ao criar conta",
-        "debug"   => $insert
+        "debug" => $insert // 🔍 ajuda a ver o erro no Railway Logs
     ]);
 }
 ?>
