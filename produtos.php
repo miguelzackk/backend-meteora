@@ -52,6 +52,9 @@ try {
 
         // Adicionar produtos novos, se existirem
         foreach ($produtos as $p) {
+            if (!is_array($p) || !isset($p['id_produto'])) {
+                continue;
+            }
             if (!in_array($p['id_produto'], $ids_existentes)) {
                 $resultado[] = $p;
                 $ids_existentes[] = $p['id_produto'];

@@ -58,7 +58,7 @@ try {
     }
 
     $categorias = [];
-    foreach ($response["data"] as $item) {
+    foreach (is_array($response["data"]) ? $response["data"] : [] as $item) {
         if (is_array($item) && isset($item["categoria"]) && !in_array($item["categoria"], $categorias, true)) {
             $categorias[] = $item["categoria"];
         }
