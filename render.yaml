@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: backend-meteora
+    runtime: docker
+    healthCheckPath: /
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false

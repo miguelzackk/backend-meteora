@@ -1,7 +1,7 @@
 <?php
 // Configurações da Supabase
-$SUPABASE_URL = "https://ecbgnduxbpgxyajevdgz.supabase.co";
-$SUPABASE_KEY = "sb_secret_kusL9WUkSpcaperk1hTgIQ_qhV3Wo4u";
+$SUPABASE_URL = getenv("SUPABASE_URL") ?: "https://ecbgnduxbpgxyajevdgz.supabase.co";
+$SUPABASE_KEY = getenv("SUPABASE_KEY");
 
 // Função auxiliar para chamada de API Supabase
 function supabase_fetch($url, $apikey) {

@@ -1,7 +1,13 @@
 <?php
 // supabase.php
-$SUPABASE_URL = getenv("SUPABASE_URL") ?: "https://ecbgnduxbpgxyajevdgz.supabase.co";
-$SUPABASE_KEY = getenv("SUPABASE_KEY") ?: "sb_secret_kusL9WUkSpcaperk1hTgIQ_qhV3Wo4u";
+$SUPABASE_URL = getenv("SUPABASE_URL");
+$SUPABASE_KEY = getenv("SUPABASE_KEY");
+
+if (!$SUPABASE_URL || !$SUPABASE_KEY) {
+    http_response_code(500);
+    echo json_encode(["error" => "SUPABASE_KEY não configurada"]);
+    exit;
+}
 
 if (!function_exists('supabase')) {
     function supabase($method, $endpoint, $body = null, $options = [])
@@ -31,8 +37,8 @@ if (!function_exists('supabase')) {
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER => $headers,
             CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_SSL_VERIFYPEER => false,
-            CURLOPT_SSL_VERIFYHOST => false
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2
         ]);
 
         if ($body !== null) {

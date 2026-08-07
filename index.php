@@ -22,6 +22,11 @@ if (str_contains($path, "produtos-categoria")) {
     exit;
 }
 
+if (preg_match("/categorias(\\.php)?$/", $path)) {
+    include "categorias.php";
+    exit;
+}
+
 if (preg_match("/produto(\.php)?$/", $path)) {
     include "produto.php";
     exit;

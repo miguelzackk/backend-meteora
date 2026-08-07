@@ -14,8 +14,8 @@ if ($_SERVER["REQUEST_METHOD"] === "OPTIONS") {
 }
 
 // --- CONFIGURAÇÃO SUPABASE ---
-$SUPABASE_URL = "https://ecbgnduxbpgxyajevdgz.supabase.co";
-$SUPABASE_KEY = "sb_secret_kusL9WUkSpcaperk1hTgIQ_qhV3Wo4u";
+$SUPABASE_URL = getenv("SUPABASE_URL") ?: "https://ecbgnduxbpgxyajevdgz.supabase.co";
+$SUPABASE_KEY = getenv("SUPABASE_KEY");
 
 // Função auxiliar genérica
 function supabase($method, $endpoint) {
