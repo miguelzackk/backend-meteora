@@ -18,7 +18,7 @@ $SUPABASE_URL = getenv("SUPABASE_URL") ?: "https://ecbgnduxbpgxyajevdgz.supabase
 $SUPABASE_KEY = getenv("SUPABASE_KEY");
 
 // Função auxiliar genérica
-function supabase($method, $endpoint) {
+function supabase_categories($method, $endpoint) {
     global $SUPABASE_URL, $SUPABASE_KEY;
 
     $url = rtrim($SUPABASE_URL, '/') . '/rest/v1/' . ltrim($endpoint, '/');
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 try {
     // Consulta agrupada para simular DISTINCT
-    $response = supabase("GET", "tbl_produto?select=categoria&group=categoria");
+    $response = supabase_categories("GET", "tbl_produto?select=categoria&group=categoria");
 
     if ($response["status"] !== 200) {
         throw new Exception("Erro na API Supabase: " . json_encode($response));

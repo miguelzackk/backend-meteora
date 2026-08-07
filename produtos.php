@@ -24,6 +24,10 @@ try {
     $url = $SUPABASE_URL . "/rest/v1/tbl_produto?select=*";
     $produtos = supabase_fetch($url, $SUPABASE_KEY);
 
+    if (!is_array($produtos) || (isset($produtos["code"]) && isset($produtos["message"]))) {
+        throw new Exception("Resposta inválida do Supabase: " . json_encode($produtos));
+    }
+
     if (empty($produtos)) {
         echo json_encode([]);
         exit;
