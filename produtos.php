@@ -35,6 +35,9 @@ try {
 
     $categorias = [];
     foreach ($produtos as $p) {
+        if (!is_array($p) || !isset($p['categoria'], $p['id_produto'])) {
+            continue;
+        }
         $cat = $p['categoria'];
         if (!isset($categorias[$cat]) || $p['id_produto'] < $categorias[$cat]['id_produto']) {
             $categorias[$cat] = $p;
@@ -57,7 +60,7 @@ try {
         }
 
 
-        while (count($resultado) < 6) {
+        while (count($resultado) > 0 && count($resultado) < 6) {
             $resultado[] = $resultado[count($resultado) % count($resultado)];
         }
     }

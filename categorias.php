@@ -51,13 +51,19 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 
 try {
     // Consulta agrupada para simular DISTINCT
-    $response = supabase_categories("GET", "tbl_produto?select=categoria&group=categoria");
+    $response = supabase_categories("GET", "tbl_produto?select=categoria");
 
     if ($response["status"] !== 200) {
         throw new Exception("Erro na API Supabase: " . json_encode($response));
     }
 
-    echo json_encode($response["data"]);
+    $categorias = [];
+    foreach ($response["data"] as $item) {
+        if (is_array($item) && isset($item["categoria"]) && !in_array($item["categoria"], $categorias, true)) {
+            $categorias[] = $item["categoria"];
+        }
+    }
+    echo json_encode(array_map(fn($categoria) => ["categoria" => $categoria], $categorias));
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode(["error" => "Erro ao buscar categorias: " . $e->getMessage()]);
